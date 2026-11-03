@@ -1,0 +1,42 @@
+name: Update Anki counts
+
+on:
+  schedule:
+    - cron: "17 * * * *" # hourly, at :17 UTC
+  workflow_dispatch: {} # lets you run it manually from the Actions tab
+
+permissions:
+  contents: write
+
+concurrency:
+  group: anki-counts
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install anki
+
+      - name: Fetch counts from AnkiWeb
+        env:
+          ANKIWEB_USER: ${{ secrets.ANKIWEB_USER }}
+          ANKIWEB_PASS: ${{ secrets.ANKIWEB_PASS }}
+        run: python anki_counts.py
+
+      - name: Commit if changed
+        run: |
+          if [ -n "$(git status --porcelain counts.json)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add counts.json
+            git commit -m "Update Anki counts"
+            git push
+          fi
