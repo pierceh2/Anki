@@ -1,7 +1,7 @@
 {
   "new": 115,
-  "learn": 33,
-  "review": 4697,
+  "learn": 32,
+  "review": 4698,
   "total_due": 4845,
   "decks": [
     {
@@ -37,8 +37,8 @@
     {
       "name": "Mandarin: Vocabulary",
       "new": 0,
-      "learn": 1,
-      "review": 39
+      "learn": 0,
+      "review": 40
     },
     {
       "name": "Mandarin: z Sound Training",
@@ -65,5 +65,5 @@
       "review": 310
     }
   ],
-  "updated": "2026-11-04T04:06:22+00:00"
+  "updated": "2026-11-04T05:10:26+00:00"
 }
