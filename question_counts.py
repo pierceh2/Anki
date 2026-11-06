@@ -166,10 +166,10 @@ async def read_mksap_count(page: Page, username: str, password: str) -> int:
     try:
         await page.wait_for_function(
             """() => document.body && (
-                document.body.innerText.trim().length > 100 ||
-                document.querySelectorAll('a, button, [role="button"]').length > 0
+                /[\d,]+\s+completed\s+questions?/i.test(document.body.innerText) ||
+                /[\d,]+\s+questions?\s+(completed|answered)/i.test(document.body.innerText)
             )""",
-            timeout=15_000,
+            timeout=20_000,
         )
     except PlaywrightTimeoutError:
         pass
