@@ -93,6 +93,28 @@ def login_failure_reason(body: str, service_name: str) -> str | None:
     return None
 
 
+async def login_form_visible(page: Page) -> bool:
+    selectors = [
+        'input[autocomplete="username"]',
+        'input[type="email"]',
+        'input[name*="username" i]',
+        'input[id*="username" i]',
+        'input[name*="email" i]',
+        'input[id*="email" i]',
+        'input[name*="user" i]',
+        'input[id*="user" i]',
+        'input[type="password"]',
+        'input[name*="password" i]',
+        'input[id*="password" i]',
+        'button[type="submit"]',
+        'input[type="submit"]',
+    ]
+    for selector in selectors:
+        if await page.locator(selector).count():
+            return True
+    return False
+
+
 async def login_if_needed(
     page: Page, username: str, password: str, service_name: str
 ) -> None:
@@ -149,9 +171,9 @@ async def login_if_needed(
                 raise RuntimeError(
                     reason + detail + " Check the account login manually; do not share its password."
                 )
-            if "/login" not in current_url and not re.search(r"sign in|log in|continue", body, re.I):
+            if not await login_form_visible(page):
                 return
-            if "/app" in current_url or re.search(r"question bank|welcome|dashboard|learning", body, re.I):
+            if "/login" not in current_url and not re.search(r"sign in|log in|continue", body, re.I):
                 return
             await page.wait_for_timeout(1_000)
 

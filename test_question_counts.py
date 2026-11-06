@@ -26,6 +26,7 @@ class QuestionCountParsingTests(unittest.TestCase):
         self.assertIn("rejected the submitted credentials", login_failure_reason("Your username or password is incorrect.", "MKSAP"))
         self.assertIn("second-factor", login_failure_reason("We need your verification code", "AMBOSS"))
         self.assertIsNone(login_failure_reason("Welcome back", "AMBOSS"))
+        self.assertIsNone(login_failure_reason("Login page with A Robust Question Bank", "MKSAP"))
 
 
 if __name__ == "__main__":
