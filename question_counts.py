@@ -8,9 +8,15 @@ import re
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 from zoneinfo import ZoneInfo
 
-from playwright.async_api import Page, TimeoutError as PlaywrightTimeoutError, async_playwright
+try:
+    from playwright.async_api import Page, TimeoutError as PlaywrightTimeoutError, async_playwright
+except ModuleNotFoundError:  # pragma: no cover - used for local unit tests
+    Page = Any  # type: ignore[assignment]
+    PlaywrightTimeoutError = TimeoutError  # type: ignore[misc, assignment]
+    async_playwright = None  # type: ignore[assignment]
 
 OUT = Path("question_counts.json")
 EASTERN = ZoneInfo("America/New_York")
@@ -155,6 +161,39 @@ async def dismiss_amboss_consent(page: Page) -> None:
     )
 
 
+def extract_mksap_completed_count(text: str) -> int | None:
+    normalized = re.sub(r"\s+", " ", text).strip()
+    patterns = (
+        r"(?i)([\d,]+)\s*(?:completed|answered)?\s*questions?(?:\s*review)?\b",
+        r"(?i)(?:completed|answered)\s+questions?\s*[:\-]?\s*([\d,]+)\b",
+        r"(?i)questions?\s+(?:completed|answered)\s*[:\-]?\s*([\d,]+)\b",
+        r"(?i)(?:your\s+progress:?)?\s*([\d,]+)\s+(?:completed|answered)\s+questions?(?:\s*review)?\b",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, normalized)
+        if match:
+            return int(match.group(1).replace(",", ""))
+    return None
+
+
+def extract_amboss_count(text: str) -> tuple[str, int]:
+    normalized = re.sub(r"\s+", " ", text).strip()
+    bank_match = re.search(
+        r"(?i)your\s+performance\s+analysis\s+(?:for\s+)?([^\n]+?)(?:\s+questions?\s+answered|$)",
+        normalized,
+    )
+    if not bank_match:
+        raise RuntimeError("Could not identify the AMBOSS bank on the performance analysis page.")
+    bank = bank_match.group(1).strip(" .:-")
+    count_match = re.search(
+        r"(?i)questions?\s+answered\s+([\d,]+)\s+out\s+of\s+([\d,]+)",
+        normalized,
+    )
+    if not count_match:
+        raise RuntimeError("Could not find the AMBOSS questions-answered count.")
+    return bank, int(count_match.group(1).replace(",", ""))
+
+
 async def read_mksap_count(page: Page, username: str, password: str) -> int:
     await page.goto("https://mksap.acponline.org", wait_until="domcontentloaded")
     await login_if_needed(page, username, password, "MKSAP")
@@ -163,46 +202,36 @@ async def read_mksap_count(page: Page, username: str, password: str) -> int:
         "https://mksap.acponline.org/app/question-bank",
         wait_until="domcontentloaded",
     )
-    try:
-        await page.wait_for_function(
-            """() => document.body && (
-                /[\d,]+\s+completed\s+questions?/i.test(document.body.innerText) ||
-                /[\d,]+\s+questions?\s+(completed|answered)/i.test(document.body.innerText)
-            )""",
-            timeout=20_000,
-        )
-    except PlaywrightTimeoutError:
-        pass
-    text = await page.locator("body").inner_text()
-    count_patterns = (
-        r"([\d,]+)\s+completed\s+questions?",
-        r"([\d,]+)\s+questions?\s+(?:completed|answered)",
-        r"(?:completed|answered)\s+questions?\s*[:\-]?\s*([\d,]+)\b",
-        r"questions?\s+(?:completed|answered)\s*[:\-]?\s*([\d,]+)\b",
-    )
-    for pattern in count_patterns:
-        match = re.search(pattern, text, re.I)
-        if match:
-            return int(match.group(1).replace(",", ""))
+    for _ in range(12):
+        try:
+            await page.wait_for_function(
+                r"""() => document.body && (
+                    /[\d,]+\s+(?:completed|answered)\s+questions?/i.test(document.body.innerText) ||
+                    /questions?\s+(?:completed|answered)/i.test(document.body.innerText) ||
+                    /[\d,]+\s+questions?\s+(?:completed|answered)/i.test(document.body.innerText)
+                )""",
+                timeout=5_000,
+            )
+        except PlaywrightTimeoutError:
+            pass
+        text = await page.locator("body").inner_text()
+        count = extract_mksap_completed_count(text)
+        if count is not None:
+            return count
+        await page.wait_for_timeout(2_000)
 
+    text = await page.locator("body").inner_text()
     count_lines = [
         line.strip()
         for line in text.splitlines()
-        if re.search(r"completed|answered|progress|total", line, re.I)
+        if re.search(r"completed|answered|progress|total|question", line, re.I)
     ][:10]
     if not count_lines:
-        count_lines = [
-            line.strip()
-            for line in text.splitlines()
-            if re.search(r"question", line, re.I)
-        ][:5]
-    if not count_lines:
         count_lines = ["No count-related text was visible."]
-    if count_lines:
-        raise RuntimeError(
-            f"Could not find the MKSAP completed-question count. Text clues: {count_lines}. "
-            + await mksap_page_context(page, response.status if response else None)
-        )
+    raise RuntimeError(
+        f"Could not find the MKSAP completed-question count. Text clues: {count_lines}. "
+        + await mksap_page_context(page, response.status if response else None)
+    )
 
 
 async def read_amboss_count(page: Page, email: str, password: str) -> tuple[str, int]:
@@ -215,14 +244,19 @@ async def read_amboss_count(page: Page, email: str, password: str) -> tuple[str,
     await click_first(page, re.compile(r"^analysis$", re.I))
     await page.wait_for_timeout(2_000)
 
+    for _ in range(12):
+        text = await page.locator("body").inner_text()
+        try:
+            bank, count = extract_amboss_count(text)
+            return bank, count
+        except RuntimeError:
+            await page.wait_for_timeout(2_000)
+
     text = await page.locator("body").inner_text()
-    bank_match = re.search(r"your\s+performance\s+analysis\s+for\s+([^\n]+)", text, re.I)
-    if not bank_match:
-        raise RuntimeError("Could not identify the AMBOSS bank on the performance analysis page.")
-    count_match = re.search(r"questions\s+answered\s+([\d,]+)\s+out\s+of\s+([\d,]+)", text, re.I)
-    if not count_match:
-        raise RuntimeError("Could not find the AMBOSS questions-answered count.")
-    return bank_match.group(1).strip(), int(count_match.group(1).replace(",", ""))
+    raise RuntimeError(
+        "Could not identify the AMBOSS bank or question-count text on the analysis page. "
+        f"Body preview: {text[:500]}"
+    )
 
 
 def record_counts(mksap: int, amboss_bank: str, amboss: int) -> None:
@@ -248,6 +282,9 @@ def wait_for_scheduled_window() -> None:
 
 
 async def scrape() -> None:
+    if async_playwright is None:
+        raise RuntimeError("playwright is not installed. Install it with 'pip install playwright'.")
+
     mksap_user = os.environ["MKSAP_USERNAME"]
     mksap_password = os.environ["MKSAP_PASSWORD"]
     amboss_email = os.environ["AMBOSS_EMAIL"]
