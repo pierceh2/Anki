@@ -248,12 +248,19 @@ def extract_mksap_completed_count(text: str) -> int | None:
 def extract_amboss_count(text: str) -> tuple[str, int]:
     normalized = re.sub(r"\s+", " ", text).strip()
     bank_match = re.search(
-        r"(?i)your\s+performance\s+analysis\s+(?:for\s+)?([^\n]+?)(?:\s+questions?\s+answered|$)",
+        r"(?i)your\s+performance\s+analysis\s+(?:for\s+)?(.+?)(?=\s+(?:overall[,]?\s+you\s+answered|questions?\s+answered)|$)",
         normalized,
     )
     if not bank_match:
         raise RuntimeError("Could not identify the AMBOSS bank on the performance analysis page.")
     bank = bank_match.group(1).strip(" .:-")
+    attempts_match = re.search(
+        r"(?i)overall[,]?\s+you\s+answered\s+([\d,]+)\s+attempts?\s+across\s+[\d,]+\s+unique\s+questions?\b",
+        normalized,
+    )
+    if attempts_match:
+        return bank, int(attempts_match.group(1).replace(",", ""))
+
     count_match = re.search(
         r"(?i)questions?\s+answered\s+([\d,]+)\s+out\s+of\s+([\d,]+)",
         normalized,

@@ -21,6 +21,15 @@ class QuestionCountParsingTests(unittest.TestCase):
         self.assertEqual(bank, "Cardiology")
         self.assertEqual(count, 56)
 
+    def test_extract_amboss_count_uses_attempts_not_unique_questions(self) -> None:
+        text = (
+            "Your performance analysis for Cardiology\n"
+            "Overall you answered 108 attempts across 99 unique questions."
+        )
+        bank, count = extract_amboss_count(text)
+        self.assertEqual(bank, "Cardiology")
+        self.assertEqual(count, 108)
+
     def test_login_failure_reason_detects_real_auth_blockers(self) -> None:
         self.assertIn("rejected the submitted credentials", login_failure_reason("Invalid password", "AMBOSS"))
         self.assertIn("rejected the submitted credentials", login_failure_reason("Your username or password is incorrect.", "MKSAP"))
