@@ -83,7 +83,7 @@ def login_failure_reason(body: str, service_name: str) -> str | None:
     if re.search(r"captcha|robot|verification required|security check|challenge", body, re.I):
         return f"{service_name} requires an interactive verification step."
     if re.search(
-        r"invalid credentials|invalid password|incorrect password|login failed|authentication failed|wrong password|wrong email|account not found",
+        r"invalid credentials|invalid password|incorrect password|username or password is incorrect|your username or password is incorrect|login failed|authentication failed|wrong password|wrong email|account not found",
         body,
         re.I,
     ):

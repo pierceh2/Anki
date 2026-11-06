@@ -23,6 +23,7 @@ class QuestionCountParsingTests(unittest.TestCase):
 
     def test_login_failure_reason_detects_real_auth_blockers(self) -> None:
         self.assertIn("rejected the submitted credentials", login_failure_reason("Invalid password", "AMBOSS"))
+        self.assertIn("rejected the submitted credentials", login_failure_reason("Your username or password is incorrect.", "MKSAP"))
         self.assertIn("second-factor", login_failure_reason("We need your verification code", "AMBOSS"))
         self.assertIsNone(login_failure_reason("Welcome back", "AMBOSS"))
 
