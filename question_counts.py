@@ -314,13 +314,11 @@ def wait_for_scheduled_window() -> None:
         time.sleep(delay)
 
 
-async def fresh_page(browser: Any) -> Page:
-    # Use a brand-new context so stale cookies or session storage cannot reorder the
-    # navigation or leave the site in a logged-in/menu-shifted state.
+async def fresh_page(browser: Any) -> tuple[Any, Page]:
+    # A brand-new Playwright context is isolated by default, so cached cookies/sessions
+    # cannot reorder the menu or leave a stale logged-in state for the next scrape.
     context = await browser.new_context()
-    await context.clear_cookies()
-    await context.clear_storage_state()
-    return await context.new_page()
+    return context, await context.new_page()
 
 
 async def scrape() -> None:
@@ -335,19 +333,21 @@ async def scrape() -> None:
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(headless=True)
         try:
-            mksap_page = await fresh_page(browser)
+            mksap_context, mksap_page = await fresh_page(browser)
             try:
                 mksap_count = await read_mksap_count(mksap_page, mksap_user, mksap_password)
             finally:
                 await mksap_page.close()
+                await mksap_context.close()
 
-            amboss_page = await fresh_page(browser)
+            amboss_context, amboss_page = await fresh_page(browser)
             try:
                 amboss_bank, amboss_count = await read_amboss_count(
                     amboss_page, amboss_email, amboss_password
                 )
             finally:
                 await amboss_page.close()
+                await amboss_context.close()
 
             record_counts(mksap_count, amboss_bank, amboss_count)
         finally:
