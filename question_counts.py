@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from playwright.async_api import Page, async_playwright
+from playwright.async_api import Page, TimeoutError as PlaywrightTimeoutError, async_playwright
 
 OUT = Path("question_counts.json")
 EASTERN = ZoneInfo("America/New_York")
@@ -38,9 +38,21 @@ async def click_first(page: Page, pattern: re.Pattern[str]) -> bool:
     return False
 
 
+async def mksap_page_context(page: Page) -> str:
+    controls = await page.locator("a, button, [role='button']").all_inner_texts()
+    labels = [
+        label.strip()
+        for label in controls
+        if label.strip() and re.search(r"question|bank|menu|nav|expand|study", label, re.I)
+    ]
+    return f"URL: {page.url.split('?')[0]}; matching controls: {labels[:20]}"
+
+
 async def login_if_needed(page: Page, username: str, password: str) -> None:
     password_input = page.locator('input[type="password"]').first
-    if not await password_input.count() or not await password_input.is_visible():
+    try:
+        await password_input.wait_for(state="visible", timeout=5_000)
+    except PlaywrightTimeoutError:
         return
 
     user_found = await fill_first(
@@ -68,6 +80,8 @@ async def login_if_needed(page: Page, username: str, password: str) -> None:
         await submit.click()
     await page.wait_for_load_state("domcontentloaded")
     await page.wait_for_timeout(2_000)
+    if await password_input.is_visible():
+        raise RuntimeError("The login form is still visible after submitting credentials.")
 
 
 async def read_mksap_count(page: Page, username: str, password: str) -> int:
@@ -75,12 +89,19 @@ async def read_mksap_count(page: Page, username: str, password: str) -> int:
     await login_if_needed(page, username, password)
 
     await click_first(page, re.compile(r"expand.*menu|open.*navigation", re.I))
-    await click_first(page, re.compile(r"^question\s*bank$", re.I))
+    if not await click_first(page, re.compile(r"^question\s*bank$", re.I)):
+        raise RuntimeError(
+            "Could not locate the MKSAP Question Bank link. "
+            + await mksap_page_context(page)
+        )
     await page.wait_for_timeout(2_000)
     text = await page.locator("body").inner_text()
     match = re.search(r"([\d,]+)\s+completed\s+questions?\b", text, re.I)
     if not match:
-        raise RuntimeError("Could not find the MKSAP completed-question count.")
+        raise RuntimeError(
+            "Could not find the MKSAP completed-question count. "
+            + await mksap_page_context(page)
+        )
     return int(match.group(1).replace(",", ""))
 
 
