@@ -307,11 +307,15 @@ async def read_amboss_count(page: Page, email: str, password: str) -> tuple[str,
     await page.goto("https://next.amboss.com/us/login", wait_until="domcontentloaded")
     await login_if_needed(page, email, password, "AMBOSS")
 
-    if not await click_first(page, re.compile(r"^analysis$", re.I)):
+    analysis_tab = page.get_by_text(re.compile(r"^analysis$", re.I)).first
+    try:
+        await analysis_tab.wait_for(state="visible", timeout=30_000)
+    except PlaywrightTimeoutError:
         raise RuntimeError(
-            "Could not find the AMBOSS Analysis navigation control after login. "
+            "The AMBOSS Analysis navigation control did not appear after login. "
             f"Current URL: {page.url.split('?')[0]}"
         )
+    await analysis_tab.click(timeout=10_000)
     await page.wait_for_timeout(5_000)
 
     for _ in range(12):
