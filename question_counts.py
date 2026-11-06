@@ -127,8 +127,8 @@ async def read_mksap_count(page: Page, username: str, password: str) -> int:
     await page.wait_for_timeout(2_000)
     text = await page.locator("body").inner_text()
     count_patterns = (
-        r"([\d,]+)\s+completed\s+questions?\b",
-        r"([\d,]+)\s+questions?\s+(?:completed|answered)\b",
+        r"([\d,]+)\s+completed\s+questions?",
+        r"([\d,]+)\s+questions?\s+(?:completed|answered)",
         r"(?:completed|answered)\s+questions?\s*[:\-]?\s*([\d,]+)\b",
         r"questions?\s+(?:completed|answered)\s*[:\-]?\s*([\d,]+)\b",
     )
