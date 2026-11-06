@@ -1,6 +1,10 @@
 import unittest
 
-from question_counts import extract_amboss_count, extract_mksap_completed_count
+from question_counts import (
+    extract_amboss_count,
+    extract_mksap_completed_count,
+    login_failure_reason,
+)
 
 
 class QuestionCountParsingTests(unittest.TestCase):
@@ -16,6 +20,11 @@ class QuestionCountParsingTests(unittest.TestCase):
         bank, count = extract_amboss_count(text)
         self.assertEqual(bank, "Cardiology")
         self.assertEqual(count, 56)
+
+    def test_login_failure_reason_detects_real_auth_blockers(self) -> None:
+        self.assertIn("rejected the submitted credentials", login_failure_reason("Invalid password", "AMBOSS"))
+        self.assertIn("second-factor", login_failure_reason("We need your verification code", "AMBOSS"))
+        self.assertIsNone(login_failure_reason("Welcome back", "AMBOSS"))
 
 
 if __name__ == "__main__":

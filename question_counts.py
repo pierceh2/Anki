@@ -79,6 +79,20 @@ async def mksap_page_context(page: Page, response_status: int | None = None) -> 
     )
 
 
+def login_failure_reason(body: str, service_name: str) -> str | None:
+    if re.search(r"captcha|robot|verification required|security check|challenge", body, re.I):
+        return f"{service_name} requires an interactive verification step."
+    if re.search(
+        r"invalid credentials|invalid password|incorrect password|login failed|authentication failed|wrong password|wrong email|account not found",
+        body,
+        re.I,
+    ):
+        return f"{service_name} rejected the submitted credentials."
+    if re.search(r"two[- ]factor|mfa|multifactor|verify your identity|verification code", body, re.I):
+        return f"{service_name} requires a second-factor verification step."
+    return None
+
+
 async def login_if_needed(
     page: Page, username: str, password: str, service_name: str
 ) -> None:
@@ -117,16 +131,31 @@ async def login_if_needed(
             raise RuntimeError("Login form is visible, but its submit button was not found.")
         await submit_button.click()
     await page.wait_for_load_state("domcontentloaded")
-    try:
-        await password_input.wait_for(state="hidden", timeout=15_000)
-    except PlaywrightTimeoutError:
-        body = await page.locator("body").inner_text()
-        if re.search(r"captcha|robot|verification required", body, re.I):
-            reason = f"{service_name} requires an interactive verification step."
-        elif re.search(r"invalid credentials|incorrect password|login failed|authentication failed", body, re.I):
-            reason = f"{service_name} rejected the submitted credentials."
-        else:
-            reason = f"The {service_name} login form remained visible after submission."
+
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        try:
+            await password_input.wait_for(state="hidden", timeout=3_000)
+            return
+        except PlaywrightTimeoutError:
+            current_url = page.url.lower()
+            body = await page.locator("body").inner_text()
+            if login_failure_reason(body, service_name):
+                reason = login_failure_reason(body, service_name)
+                alert_visible = await page.locator(
+                    '[role="alert"], [aria-live="assertive"]'
+                ).count()
+                detail = " A login alert is visible." if alert_visible else " No login alert was detected."
+                raise RuntimeError(
+                    reason + detail + " Check the account login manually; do not share its password."
+                )
+            if "/login" not in current_url and not re.search(r"sign in|log in|continue", body, re.I):
+                return
+            await page.wait_for_timeout(1_000)
+
+    body = await page.locator("body").inner_text()
+    reason = login_failure_reason(body, service_name)
+    if reason:
         alert_visible = await page.locator(
             '[role="alert"], [aria-live="assertive"]'
         ).count()
@@ -134,6 +163,10 @@ async def login_if_needed(
         raise RuntimeError(
             reason + detail + " Check the account login manually; do not share its password."
         )
+    raise RuntimeError(
+        f"The {service_name} login form remained visible after submission. "
+        "No login alert was detected. Check the account login manually; do not share its password."
+    )
 
 
 async def dismiss_amboss_consent(page: Page) -> None:
