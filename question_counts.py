@@ -314,6 +314,15 @@ def wait_for_scheduled_window() -> None:
         time.sleep(delay)
 
 
+async def fresh_page(browser: Any) -> Page:
+    # Use a brand-new context so stale cookies or session storage cannot reorder the
+    # navigation or leave the site in a logged-in/menu-shifted state.
+    context = await browser.new_context()
+    await context.clear_cookies()
+    await context.clear_storage_state()
+    return await context.new_page()
+
+
 async def scrape() -> None:
     if async_playwright is None:
         raise RuntimeError("playwright is not installed. Install it with 'pip install playwright'.")
@@ -326,11 +335,20 @@ async def scrape() -> None:
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(headless=True)
         try:
-            page = await browser.new_page()
-            mksap_count = await read_mksap_count(page, mksap_user, mksap_password)
-            amboss_bank, amboss_count = await read_amboss_count(
-                page, amboss_email, amboss_password
-            )
+            mksap_page = await fresh_page(browser)
+            try:
+                mksap_count = await read_mksap_count(mksap_page, mksap_user, mksap_password)
+            finally:
+                await mksap_page.close()
+
+            amboss_page = await fresh_page(browser)
+            try:
+                amboss_bank, amboss_count = await read_amboss_count(
+                    amboss_page, amboss_email, amboss_password
+                )
+            finally:
+                await amboss_page.close()
+
             record_counts(mksap_count, amboss_bank, amboss_count)
         finally:
             await browser.close()
