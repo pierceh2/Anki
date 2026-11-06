@@ -126,13 +126,35 @@ async def read_mksap_count(page: Page, username: str, password: str) -> int:
     )
     await page.wait_for_timeout(2_000)
     text = await page.locator("body").inner_text()
-    match = re.search(r"([\d,]+)\s+completed\s+questions?\b", text, re.I)
-    if not match:
+    count_patterns = (
+        r"([\d,]+)\s+completed\s+questions?\b",
+        r"([\d,]+)\s+questions?\s+(?:completed|answered)\b",
+        r"(?:completed|answered)\s+questions?\s*[:\-]?\s*([\d,]+)\b",
+        r"questions?\s+(?:completed|answered)\s*[:\-]?\s*([\d,]+)\b",
+    )
+    for pattern in count_patterns:
+        match = re.search(pattern, text, re.I)
+        if match:
+            return int(match.group(1).replace(",", ""))
+
+    count_lines = [
+        line.strip()
+        for line in text.splitlines()
+        if re.search(r"completed|answered|progress|total", line, re.I)
+    ][:10]
+    if not count_lines:
+        count_lines = [
+            line.strip()
+            for line in text.splitlines()
+            if re.search(r"question", line, re.I)
+        ][:5]
+    if not count_lines:
+        count_lines = ["No count-related text was visible."]
+    if count_lines:
         raise RuntimeError(
-            "Could not find the MKSAP completed-question count. "
+            f"Could not find the MKSAP completed-question count. Text clues: {count_lines}. "
             + await mksap_page_context(page)
         )
-    return int(match.group(1).replace(",", ""))
 
 
 async def read_amboss_count(page: Page, email: str, password: str) -> tuple[str, int]:
