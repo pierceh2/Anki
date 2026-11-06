@@ -132,7 +132,7 @@ async def login_if_needed(
         await submit_button.click()
     await page.wait_for_load_state("domcontentloaded")
 
-    deadline = time.monotonic() + 30
+    deadline = time.monotonic() + 90
     while time.monotonic() < deadline:
         try:
             await password_input.wait_for(state="hidden", timeout=3_000)
@@ -140,8 +140,8 @@ async def login_if_needed(
         except PlaywrightTimeoutError:
             current_url = page.url.lower()
             body = await page.locator("body").inner_text()
-            if login_failure_reason(body, service_name):
-                reason = login_failure_reason(body, service_name)
+            reason = login_failure_reason(body, service_name)
+            if reason:
                 alert_visible = await page.locator(
                     '[role="alert"], [aria-live="assertive"]'
                 ).count()
@@ -150,6 +150,8 @@ async def login_if_needed(
                     reason + detail + " Check the account login manually; do not share its password."
                 )
             if "/login" not in current_url and not re.search(r"sign in|log in|continue", body, re.I):
+                return
+            if "/app" in current_url or re.search(r"question bank|welcome|dashboard|learning", body, re.I):
                 return
             await page.wait_for_timeout(1_000)
 
@@ -165,7 +167,7 @@ async def login_if_needed(
         )
     raise RuntimeError(
         f"The {service_name} login form remained visible after submission. "
-        "No login alert was detected. Check the account login manually; do not share its password."
+        "The browser never left the login screen. Check the account login manually; do not share its password."
     )
 
 
