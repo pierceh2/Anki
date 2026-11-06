@@ -45,7 +45,46 @@ async def mksap_page_context(page: Page) -> str:
         for label in controls
         if label.strip() and re.search(r"question|bank|menu|nav|expand|study", label, re.I)
     ]
-    return f"URL: {page.url.split('?')[0]}; matching controls: {labels[:20]}"
+    top_left = await page.locator("button, [role='button']").evaluate_all(
+        """elements => elements.map(element => {
+            const rect = element.getBoundingClientRect();
+            return {
+                x: Math.round(rect.x),
+                y: Math.round(rect.y),
+                label: element.getAttribute('aria-label') || element.title || '',
+                text: (element.innerText || '').trim(),
+                className: String(element.className).slice(0, 80)
+            };
+        }).filter(item => item.x >= 0 && item.x < 160 && item.y >= 0 && item.y < 120)
+          .slice(0, 10)"""
+    )
+    return (
+        f"URL: {page.url.split('?')[0]}; matching controls: {labels[:20]}; "
+        f"top-left controls: {top_left}"
+    )
+
+
+async def open_mksap_menu(page: Page) -> None:
+    if await click_first(page, re.compile(r"menu|navigation|sidebar", re.I)):
+        await page.wait_for_timeout(500)
+        return
+
+    controls = page.locator("button, [role='button']")
+    candidates = []
+    for index in range(await controls.count()):
+        control = controls.nth(index)
+        if not await control.is_visible():
+            continue
+        if (await control.inner_text()).strip():
+            continue
+        box = await control.bounding_box()
+        if box and box["x"] < 160 and box["y"] < 120:
+            candidates.append((box["x"] + box["y"], control))
+
+    if candidates:
+        _, menu_button = min(candidates, key=lambda candidate: candidate[0])
+        await menu_button.click(timeout=5_000)
+        await page.wait_for_timeout(500)
 
 
 async def login_if_needed(page: Page, username: str, password: str) -> None:
@@ -96,7 +135,7 @@ async def read_mksap_count(page: Page, username: str, password: str) -> int:
     await page.goto("https://mksap.acponline.org", wait_until="domcontentloaded")
     await login_if_needed(page, username, password)
 
-    await click_first(page, re.compile(r"expand.*menu|open.*navigation", re.I))
+    await open_mksap_menu(page)
     if not await click_first(page, re.compile(r"^question\s*bank$", re.I)):
         raise RuntimeError(
             "Could not locate the MKSAP Question Bank link. "
