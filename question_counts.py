@@ -120,9 +120,16 @@ async def login_if_needed(
 ) -> None:
     password_input = page.locator('input[type="password"]').first
     try:
-        await password_input.wait_for(state="visible", timeout=5_000)
+        await password_input.wait_for(state="visible", timeout=30_000)
     except PlaywrightTimeoutError:
-        return
+        if not await login_form_visible(page):
+            raise RuntimeError(
+                f"The {service_name} login page did not render a login form. "
+                f"Current URL: {page.url.split('?')[0]}"
+            )
+        raise RuntimeError(
+            f"The {service_name} login form appeared, but its password field did not become visible."
+        )
 
     user_found = await fill_first(
         page,
@@ -252,7 +259,7 @@ def extract_amboss_count(text: str) -> tuple[str, int]:
 
 
 async def read_mksap_count(page: Page, username: str, password: str) -> int:
-    await page.goto("https://mksap.acponline.org", wait_until="domcontentloaded")
+    await page.goto("https://mksap.acponline.org/login", wait_until="domcontentloaded")
     await login_if_needed(page, username, password, "MKSAP")
 
     response = await page.goto(
