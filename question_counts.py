@@ -79,9 +79,17 @@ async def login_if_needed(page: Page, username: str, password: str) -> None:
             raise RuntimeError("Login form is visible, but its submit button was not found.")
         await submit.click()
     await page.wait_for_load_state("domcontentloaded")
-    await page.wait_for_timeout(2_000)
-    if await password_input.is_visible():
-        raise RuntimeError("The login form is still visible after submitting credentials.")
+    try:
+        await password_input.wait_for(state="hidden", timeout=15_000)
+    except PlaywrightTimeoutError:
+        body = await page.locator("body").inner_text()
+        if re.search(r"captcha|robot|verification required", body, re.I):
+            reason = "MKSAP requires an interactive verification step."
+        elif re.search(r"invalid credentials|incorrect password|login failed|authentication failed", body, re.I):
+            reason = "MKSAP rejected the submitted credentials."
+        else:
+            reason = "The MKSAP login form remained visible after submission."
+        raise RuntimeError(reason + " Check the account login manually; do not share its password.")
 
 
 async def read_mksap_count(page: Page, username: str, password: str) -> int:
