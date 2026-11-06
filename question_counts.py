@@ -131,6 +131,9 @@ async def login_if_needed(
             f"The {service_name} login form appeared, but its password field did not become visible."
         )
 
+    if service_name == "AMBOSS":
+        await dismiss_amboss_consent(page)
+
     user_found = await fill_first(
         page,
         [
@@ -302,7 +305,6 @@ async def read_mksap_count(page: Page, username: str, password: str) -> int:
 
 async def read_amboss_count(page: Page, email: str, password: str) -> tuple[str, int]:
     await page.goto("https://next.amboss.com/us/login", wait_until="domcontentloaded")
-    await dismiss_amboss_consent(page)
     await login_if_needed(page, email, password, "AMBOSS")
 
     await click_first(page, re.compile(r"bank\s+and\s+courses", re.I))
