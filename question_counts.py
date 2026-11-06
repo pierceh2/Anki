@@ -72,7 +72,9 @@ async def mksap_page_context(page: Page) -> str:
     )
 
 
-async def login_if_needed(page: Page, username: str, password: str) -> None:
+async def login_if_needed(
+    page: Page, username: str, password: str, service_name: str
+) -> None:
     password_input = page.locator('input[type="password"]').first
     try:
         await password_input.wait_for(state="visible", timeout=5_000)
@@ -113,12 +115,18 @@ async def login_if_needed(page: Page, username: str, password: str) -> None:
     except PlaywrightTimeoutError:
         body = await page.locator("body").inner_text()
         if re.search(r"captcha|robot|verification required", body, re.I):
-            reason = "MKSAP requires an interactive verification step."
+            reason = f"{service_name} requires an interactive verification step."
         elif re.search(r"invalid credentials|incorrect password|login failed|authentication failed", body, re.I):
-            reason = "MKSAP rejected the submitted credentials."
+            reason = f"{service_name} rejected the submitted credentials."
         else:
-            reason = "The MKSAP login form remained visible after submission."
-        raise RuntimeError(reason + " Check the account login manually; do not share its password.")
+            reason = f"The {service_name} login form remained visible after submission."
+        alert_visible = await page.locator(
+            '[role="alert"], [aria-live="assertive"]'
+        ).count()
+        detail = " A login alert is visible." if alert_visible else " No login alert was detected."
+        raise RuntimeError(
+            reason + detail + " Check the account login manually; do not share its password."
+        )
 
 
 async def dismiss_amboss_consent(page: Page) -> None:
@@ -148,7 +156,7 @@ async def dismiss_amboss_consent(page: Page) -> None:
 
 async def read_mksap_count(page: Page, username: str, password: str) -> int:
     await page.goto("https://mksap.acponline.org", wait_until="domcontentloaded")
-    await login_if_needed(page, username, password)
+    await login_if_needed(page, username, password, "MKSAP")
 
     await page.goto(
         "https://mksap.acponline.org/app/question-bank",
@@ -190,7 +198,7 @@ async def read_mksap_count(page: Page, username: str, password: str) -> int:
 async def read_amboss_count(page: Page, email: str, password: str) -> tuple[str, int]:
     await page.goto("https://next.amboss.com/us/login", wait_until="domcontentloaded")
     await dismiss_amboss_consent(page)
-    await login_if_needed(page, email, password)
+    await login_if_needed(page, email, password, "AMBOSS")
 
     await click_first(page, re.compile(r"bank\s+and\s+courses", re.I))
     await click_first(page, re.compile(r"^learning$", re.I))
