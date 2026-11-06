@@ -97,11 +97,16 @@ async def login_if_needed(page: Page, username: str, password: str) -> None:
         raise RuntimeError("Login form is visible, but its username/email field was not found.")
 
     await password_input.fill(password)
-    if not await click_first(page, re.compile(r"log\s*in|sign\s*in", re.I)):
-        submit = page.locator('button[type="submit"], input[type="submit"]').first
-        if not await submit.count() or not await submit.is_visible():
-            raise RuntimeError("Login form is visible, but its submit button was not found.")
+    submit = page.locator('button[type="submit"], input[type="submit"]').first
+    if await submit.count() and await submit.is_visible():
         await submit.click()
+    else:
+        submit_button = page.get_by_role(
+            "button", name=re.compile(r"log\s*in|sign\s*in", re.I)
+        ).first
+        if not await submit_button.count() or not await submit_button.is_visible():
+            raise RuntimeError("Login form is visible, but its submit button was not found.")
+        await submit_button.click()
     await page.wait_for_load_state("domcontentloaded")
     try:
         await password_input.wait_for(state="hidden", timeout=15_000)
@@ -114,6 +119,31 @@ async def login_if_needed(page: Page, username: str, password: str) -> None:
         else:
             reason = "The MKSAP login form remained visible after submission."
         raise RuntimeError(reason + " Check the account login manually; do not share its password.")
+
+
+async def dismiss_amboss_consent(page: Page) -> None:
+    dialog = page.get_by_role("dialog").filter(
+        has_text=re.compile(r"storage|cookie|privacy|consent", re.I)
+    ).first
+    if not await dialog.count() or not await dialog.is_visible():
+        return
+
+    safe_choices = (
+        re.compile(r"only\s+(?:allow\s+)?(?:necessary|essential)|(?:necessary|essential)\s+only", re.I),
+        re.compile(r"reject\s+(?:all|optional|non[- ]essential)|decline\s+(?:all|optional)", re.I),
+    )
+    for choice in safe_choices:
+        button = dialog.get_by_role("button", name=choice).first
+        if await button.count() and await button.is_visible():
+            await button.click()
+            await dialog.wait_for(state="hidden", timeout=10_000)
+            return
+
+    labels = await dialog.get_by_role("button").all_inner_texts()
+    raise RuntimeError(
+        "AMBOSS showed a consent dialog without a necessary-only/reject option. "
+        f"Visible choices: {labels}"
+    )
 
 
 async def read_mksap_count(page: Page, username: str, password: str) -> int:
@@ -159,6 +189,7 @@ async def read_mksap_count(page: Page, username: str, password: str) -> int:
 
 async def read_amboss_count(page: Page, email: str, password: str) -> tuple[str, int]:
     await page.goto("https://next.amboss.com/us/login", wait_until="domcontentloaded")
+    await dismiss_amboss_consent(page)
     await login_if_needed(page, email, password)
 
     await click_first(page, re.compile(r"bank\s+and\s+courses", re.I))
