@@ -307,10 +307,12 @@ async def read_amboss_count(page: Page, email: str, password: str) -> tuple[str,
     await page.goto("https://next.amboss.com/us/login", wait_until="domcontentloaded")
     await login_if_needed(page, email, password, "AMBOSS")
 
-    await click_first(page, re.compile(r"bank\s+and\s+courses", re.I))
-    await click_first(page, re.compile(r"^learning$", re.I))
-    await click_first(page, re.compile(r"^analysis$", re.I))
-    await page.wait_for_timeout(2_000)
+    if not await click_first(page, re.compile(r"^analysis$", re.I)):
+        raise RuntimeError(
+            "Could not find the AMBOSS Analysis navigation control after login. "
+            f"Current URL: {page.url.split('?')[0]}"
+        )
+    await page.wait_for_timeout(5_000)
 
     for _ in range(12):
         text = await page.locator("body").inner_text()
@@ -321,9 +323,14 @@ async def read_amboss_count(page: Page, email: str, password: str) -> tuple[str,
             await page.wait_for_timeout(2_000)
 
     text = await page.locator("body").inner_text()
+    clues = [
+        line.strip()
+        for line in text.splitlines()
+        if re.search(r"question|answered|analysis|performance|bank", line, re.I)
+    ][:20]
     raise RuntimeError(
         "Could not identify the AMBOSS bank or question-count text on the analysis page. "
-        f"Body preview: {text[:500]}"
+        f"URL: {page.url.split('?')[0]}; text clues: {clues}; body preview: {text[:500]}"
     )
 
 
