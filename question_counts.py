@@ -72,38 +72,6 @@ async def mksap_page_context(page: Page) -> str:
     )
 
 
-async def open_mksap_menu(page: Page) -> None:
-    try:
-        await page.locator("a:visible, button:visible, [role='button']:visible").first.wait_for(
-            state="visible", timeout=10_000
-        )
-    except PlaywrightTimeoutError:
-        pass
-
-    if await click_first(page, re.compile(r"menu|navigation|sidebar", re.I)):
-        await page.wait_for_timeout(500)
-        return
-
-    controls = page.locator("button, [role='button']")
-    candidates = []
-    for index in range(await controls.count()):
-        control = controls.nth(index)
-        if not await control.is_visible():
-            continue
-        if (await control.inner_text()).strip():
-            continue
-        box = await control.bounding_box()
-        if box and box["x"] < 160 and box["y"] < 120:
-            candidates.append((box["x"] + box["y"], control))
-
-    if candidates:
-        _, menu_button = min(candidates, key=lambda candidate: candidate[0])
-        await menu_button.click(timeout=5_000)
-    else:
-        await page.mouse.click(35, 33)
-    await page.wait_for_timeout(500)
-
-
 async def login_if_needed(page: Page, username: str, password: str) -> None:
     password_input = page.locator('input[type="password"]').first
     try:
@@ -152,12 +120,10 @@ async def read_mksap_count(page: Page, username: str, password: str) -> int:
     await page.goto("https://mksap.acponline.org", wait_until="domcontentloaded")
     await login_if_needed(page, username, password)
 
-    await open_mksap_menu(page)
-    if not await click_first(page, re.compile(r"^question\s*bank$", re.I)):
-        raise RuntimeError(
-            "Could not locate the MKSAP Question Bank link. "
-            + await mksap_page_context(page)
-        )
+    await page.goto(
+        "https://mksap.acponline.org/app/question-bank",
+        wait_until="domcontentloaded",
+    )
     await page.wait_for_timeout(2_000)
     text = await page.locator("body").inner_text()
     match = re.search(r"([\d,]+)\s+completed\s+questions?\b", text, re.I)
