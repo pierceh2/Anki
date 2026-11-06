@@ -58,13 +58,28 @@ async def mksap_page_context(page: Page) -> str:
         }).filter(item => item.x >= 0 && item.x < 160 && item.y >= 0 && item.y < 120)
           .slice(0, 10)"""
     )
+    page_state = await page.evaluate(
+        """() => ({
+            readyState: document.readyState,
+            bodyCharacters: document.body?.innerText?.trim().length || 0,
+            controlCount: document.querySelectorAll('a, button, [role="button"]').length,
+            iframeCount: document.querySelectorAll('iframe').length
+        })"""
+    )
     return (
         f"URL: {page.url.split('?')[0]}; matching controls: {labels[:20]}; "
-        f"top-left controls: {top_left}"
+        f"top-left controls: {top_left}; page state: {page_state}"
     )
 
 
 async def open_mksap_menu(page: Page) -> None:
+    try:
+        await page.locator("a:visible, button:visible, [role='button']:visible").first.wait_for(
+            state="visible", timeout=10_000
+        )
+    except PlaywrightTimeoutError:
+        pass
+
     if await click_first(page, re.compile(r"menu|navigation|sidebar", re.I)):
         await page.wait_for_timeout(500)
         return
@@ -84,7 +99,9 @@ async def open_mksap_menu(page: Page) -> None:
     if candidates:
         _, menu_button = min(candidates, key=lambda candidate: candidate[0])
         await menu_button.click(timeout=5_000)
-        await page.wait_for_timeout(500)
+    else:
+        await page.mouse.click(35, 33)
+    await page.wait_for_timeout(500)
 
 
 async def login_if_needed(page: Page, username: str, password: str) -> None:
