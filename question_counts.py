@@ -149,7 +149,8 @@ async def login_if_needed(
         raise RuntimeError("Login form is visible, but its username/email field was not found.")
 
     await password_input.fill(password)
-    submit = page.locator('button[type="submit"], input[type="submit"]').first
+    login_form = password_input.locator("xpath=ancestor::form[1]")
+    submit = login_form.locator('button[type="submit"], input[type="submit"]').first
     if await submit.count() and await submit.is_visible():
         await submit.click()
     else:
@@ -201,24 +202,25 @@ async def login_if_needed(
 
 
 async def dismiss_amboss_consent(page: Page) -> None:
-    dialog = page.get_by_role("dialog").filter(
-        has_text=re.compile(r"storage|cookie|privacy|consent", re.I)
+    consent_heading = page.get_by_text(
+        re.compile(r"^your privacy settings$", re.I)
     ).first
-    if not await dialog.count() or not await dialog.is_visible():
+    if not await consent_heading.count() or not await consent_heading.is_visible():
         return
 
     safe_choices = (
+        re.compile(r"reject all|except essential", re.I),
         re.compile(r"only\s+(?:allow\s+)?(?:necessary|essential)|(?:necessary|essential)\s+only", re.I),
         re.compile(r"reject\s+(?:all|optional|non[- ]essential)|decline\s+(?:all|optional)", re.I),
     )
     for choice in safe_choices:
-        button = dialog.get_by_role("button", name=choice).first
+        button = page.get_by_role("button", name=choice).first
         if await button.count() and await button.is_visible():
             await button.click()
-            await dialog.wait_for(state="hidden", timeout=10_000)
+            await button.wait_for(state="hidden", timeout=10_000)
             return
 
-    labels = await dialog.get_by_role("button").all_inner_texts()
+    labels = await page.get_by_role("button").all_inner_texts()
     raise RuntimeError(
         "AMBOSS showed a consent dialog without a necessary-only/reject option. "
         f"Visible choices: {labels}"
