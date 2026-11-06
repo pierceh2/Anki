@@ -38,7 +38,7 @@ async def click_first(page: Page, pattern: re.Pattern[str]) -> bool:
     return False
 
 
-async def mksap_page_context(page: Page) -> str:
+async def mksap_page_context(page: Page, response_status: int | None = None) -> str:
     controls = await page.locator("a, button, [role='button']").all_inner_texts()
     labels = [
         label.strip()
@@ -67,7 +67,8 @@ async def mksap_page_context(page: Page) -> str:
         })"""
     )
     return (
-        f"URL: {page.url.split('?')[0]}; matching controls: {labels[:20]}; "
+        f"URL: {page.url.split('?')[0]}; response status: {response_status}; "
+        f"matching controls: {labels[:20]}; "
         f"top-left controls: {top_left}; page state: {page_state}"
     )
 
@@ -158,11 +159,20 @@ async def read_mksap_count(page: Page, username: str, password: str) -> int:
     await page.goto("https://mksap.acponline.org", wait_until="domcontentloaded")
     await login_if_needed(page, username, password, "MKSAP")
 
-    await page.goto(
+    response = await page.goto(
         "https://mksap.acponline.org/app/question-bank",
         wait_until="domcontentloaded",
     )
-    await page.wait_for_timeout(2_000)
+    try:
+        await page.wait_for_function(
+            """() => document.body && (
+                document.body.innerText.trim().length > 100 ||
+                document.querySelectorAll('a, button, [role="button"]').length > 0
+            )""",
+            timeout=15_000,
+        )
+    except PlaywrightTimeoutError:
+        pass
     text = await page.locator("body").inner_text()
     count_patterns = (
         r"([\d,]+)\s+completed\s+questions?",
@@ -191,7 +201,7 @@ async def read_mksap_count(page: Page, username: str, password: str) -> int:
     if count_lines:
         raise RuntimeError(
             f"Could not find the MKSAP completed-question count. Text clues: {count_lines}. "
-            + await mksap_page_context(page)
+            + await mksap_page_context(page, response.status if response else None)
         )
 
 
