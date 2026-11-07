@@ -1,8 +1,8 @@
 {
   "new": 115,
-  "learn": 36,
-  "review": 4656,
-  "total_due": 4807,
+  "learn": 37,
+  "review": 4649,
+  "total_due": 4801,
   "decks": [
     {
       "name": "AnKing Overhaul for Step 1 & 2",
@@ -61,9 +61,9 @@
     {
       "name": "The Only EKG Deck You'll Ever Need",
       "new": 15,
-      "learn": 2,
-      "review": 305
+      "learn": 3,
+      "review": 298
     }
   ],
-  "updated": "2026-11-07T22:27:27+00:00"
+  "updated": "2026-11-07T23:45:56+00:00"
 }
