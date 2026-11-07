@@ -1,8 +1,8 @@
 {
   "new": 115,
   "learn": 36,
-  "review": 4678,
-  "total_due": 4829,
+  "review": 4656,
+  "total_due": 4807,
   "decks": [
     {
       "name": "AnKing Overhaul for Step 1 & 2",
@@ -38,7 +38,7 @@
       "name": "Mandarin: Vocabulary",
       "new": 0,
       "learn": 0,
-      "review": 22
+      "review": 0
     },
     {
       "name": "Mandarin: z Sound Training",
@@ -65,5 +65,5 @@
       "review": 305
     }
   ],
-  "updated": "2026-11-07T04:00:20+00:00"
+  "updated": "2026-11-07T22:27:27+00:00"
 }
