@@ -1,13 +1,27 @@
 import unittest
+from datetime import datetime
 
 from question_counts import (
+    EASTERN,
     extract_amboss_count,
     extract_mksap_completed_count,
     login_failure_reason,
+    scheduled_run_target,
 )
 
 
 class QuestionCountParsingTests(unittest.TestCase):
+    def test_scheduled_run_target_uses_fixed_noon_time(self) -> None:
+        now = datetime(2025, 1, 15, 11, 45, tzinfo=EASTERN)
+        self.assertEqual(
+            scheduled_run_target(now),
+            datetime(2025, 1, 15, 12, 0, tzinfo=EASTERN),
+        )
+
+    def test_scheduled_run_target_rejects_times_outside_windows(self) -> None:
+        now = datetime(2025, 1, 15, 13, 0, tzinfo=EASTERN)
+        self.assertIsNone(scheduled_run_target(now))
+
     def test_extract_mksap_completed_count_handles_live_text_variants(self) -> None:
         self.assertEqual(extract_mksap_completed_count("56 Completed QuestionsReview"), 56)
         self.assertEqual(

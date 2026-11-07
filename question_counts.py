@@ -346,14 +346,23 @@ def record_counts(mksap: int, amboss_bank: str, amboss: int) -> None:
     print(f"Recorded {date}: MKSAP {mksap}; AMBOSS {amboss_bank} {amboss}")
 
 
+def scheduled_run_target(now: datetime) -> datetime | None:
+    if now.hour == 11 and now.minute >= 30 or now.hour == 12 and now.minute <= 30:
+        return now.replace(hour=12, minute=0, second=0, microsecond=0)
+    if now.hour == 20 and now.minute >= 30 or now.hour == 21 and now.minute <= 30:
+        return now.replace(hour=20, minute=45, second=0, microsecond=0) + timedelta(
+            minutes=random.randint(0, 30)
+        )
+    return None
+
+
 def wait_for_scheduled_window() -> None:
     now = datetime.now(EASTERN)
-    if not (now.hour == 20 and now.minute >= 30 or now.hour == 21 and now.minute <= 30):
-        raise SystemExit("Scheduled run is outside the 8:30-9:30pm Eastern window; skipping.")
-
-    target = now.replace(hour=20, minute=45, second=0, microsecond=0) + timedelta(
-        minutes=random.randint(0, 30)
-    )
+    target = scheduled_run_target(now)
+    if target is None:
+        raise SystemExit(
+            "Scheduled run is outside the noon or 8:30-9:30pm Eastern windows; skipping."
+        )
     delay = max(0, (target - now).total_seconds())
     if delay:
         time.sleep(delay)
