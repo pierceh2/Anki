@@ -1,8 +1,8 @@
 {
-  "new": 115,
+  "new": 120,
   "learn": 42,
   "review": 4632,
-  "total_due": 4789,
+  "total_due": 4794,
   "decks": [
     {
       "name": "AnKing Overhaul for Step 1 & 2",
@@ -36,7 +36,7 @@
     },
     {
       "name": "Mandarin: Vocabulary",
-      "new": 0,
+      "new": 5,
       "learn": 0,
       "review": 0
     },
@@ -65,5 +65,5 @@
       "review": 278
     }
   ],
-  "updated": "2026-11-09T17:56:36+00:00"
+  "updated": "2026-11-09T21:02:39+00:00"
 }
