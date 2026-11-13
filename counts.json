@@ -1,8 +1,8 @@
 {
   "new": 115,
   "learn": 42,
-  "review": 4635,
-  "total_due": 4792,
+  "review": 4611,
+  "total_due": 4768,
   "decks": [
     {
       "name": "AnKing Overhaul for Step 1 & 2",
@@ -14,7 +14,7 @@
       "name": "Cardiology",
       "new": 10,
       "learn": 0,
-      "review": 367
+      "review": 343
     },
     {
       "name": "Cardiology Trials",
@@ -65,5 +65,5 @@
       "review": 278
     }
   ],
-  "updated": "2026-11-12T21:00:18+00:00"
+  "updated": "2026-11-13T02:50:19+00:00"
 }
