@@ -1,20 +1,20 @@
 {
   "new": 115,
   "learn": 43,
-  "review": 4639,
-  "total_due": 4797,
+  "review": 4661,
+  "total_due": 4819,
   "decks": [
     {
       "name": "AnKing Overhaul for Step 1 & 2",
       "new": 20,
       "learn": 7,
-      "review": 3675
+      "review": 3676
     },
     {
       "name": "Cardiology",
       "new": 10,
       "learn": 1,
-      "review": 349
+      "review": 351
     },
     {
       "name": "Cardiology Trials",
@@ -38,7 +38,7 @@
       "name": "Mandarin: Vocabulary",
       "new": 0,
       "learn": 0,
-      "review": 17
+      "review": 36
     },
     {
       "name": "Mandarin: z Sound Training",
@@ -65,5 +65,5 @@
       "review": 281
     }
   ],
-  "updated": "2026-11-14T04:04:10+00:00"
+  "updated": "2026-11-15T04:04:22+00:00"
 }
