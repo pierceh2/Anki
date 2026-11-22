@@ -1,14 +1,14 @@
 {
   "new": 115,
   "learn": 46,
-  "review": 4705,
-  "total_due": 4866,
+  "review": 4718,
+  "total_due": 4879,
   "decks": [
     {
       "name": "AnKing Overhaul for Step 1 & 2",
       "new": 20,
       "learn": 7,
-      "review": 3682
+      "review": 3683
     },
     {
       "name": "Cardiology",
@@ -38,7 +38,7 @@
       "name": "Mandarin: Vocabulary",
       "new": 0,
       "learn": 3,
-      "review": 69
+      "review": 80
     },
     {
       "name": "Mandarin: z Sound Training",
@@ -62,8 +62,8 @@
       "name": "The Only EKG Deck You'll Ever Need",
       "new": 15,
       "learn": 8,
-      "review": 283
+      "review": 284
     }
   ],
-  "updated": "2026-11-21T04:04:14+00:00"
+  "updated": "2026-11-22T04:06:34+00:00"
 }
