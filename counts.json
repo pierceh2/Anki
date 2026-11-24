@@ -35,6 +35,12 @@
       "review": 40
     },
     {
+      "name": "Internal Medicine Boards",
+      "new": 0,
+      "learn": 0,
+      "review": 0
+    },
+    {
       "name": "Mandarin: Vocabulary",
       "new": 0,
       "learn": 1,
@@ -65,5 +71,5 @@
       "review": 284
     }
   ],
-  "updated": "2026-11-24T12:11:14+00:00"
+  "updated": "2026-11-24T13:31:02+00:00"
 }
