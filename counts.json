@@ -1,8 +1,8 @@
 {
   "new": 105,
   "learn": 39,
-  "review": 973,
-  "total_due": 1117,
+  "review": 956,
+  "total_due": 1100,
   "decks": [
     {
       "name": "Cardiology",
@@ -38,7 +38,7 @@
       "name": "Mandarin: Vocabulary",
       "new": 0,
       "learn": 0,
-      "review": 17
+      "review": 0
     },
     {
       "name": "Mandarin: z Sound Training",
@@ -65,5 +65,5 @@
       "review": 284
     }
   ],
-  "updated": "2026-11-27T04:24:03+00:00"
+  "updated": "2026-11-27T15:11:49+00:00"
 }
