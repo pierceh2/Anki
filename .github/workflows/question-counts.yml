@@ -2,9 +2,11 @@ name: Update question bank counts
 
 on:
   schedule:
-    # 00:45/01:45 UTC covers the 8:45pm Eastern run; 16:00/17:00 UTC covers noon.
-    - cron: "45 0,1 * * *"
-    - cron: "0 16,17 * * *"
+    # EST/UTC-5: 7:55am = 12:55 UTC, 11:55am = 16:55 UTC,
+    # 5pm = 22:00 UTC, 10pm = 03:00 UTC.
+    - cron: "55 12,16 * * *"
+    - cron: "0 22 * * *"
+    - cron: "0 3 * * *"
   workflow_dispatch: {}
 
 permissions:
