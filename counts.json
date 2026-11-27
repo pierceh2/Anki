@@ -1,8 +1,8 @@
 {
-  "new": 105,
-  "learn": 39,
-  "review": 956,
-  "total_due": 1100,
+  "new": 95,
+  "learn": 34,
+  "review": 941,
+  "total_due": 1070,
   "decks": [
     {
       "name": "Cardiology",
@@ -30,8 +30,8 @@
     },
     {
       "name": "Internal Medicine",
-      "new": 10,
-      "learn": 3,
+      "new": 0,
+      "learn": 0,
       "review": 0
     },
     {
@@ -61,9 +61,9 @@
     {
       "name": "The Only EKG Deck You'll Ever Need",
       "new": 15,
-      "learn": 8,
-      "review": 284
+      "learn": 6,
+      "review": 269
     }
   ],
-  "updated": "2026-11-27T15:11:49+00:00"
+  "updated": "2026-11-27T20:11:56+00:00"
 }
